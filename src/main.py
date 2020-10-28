@@ -9,7 +9,7 @@ print("AES - 128")
 inputPlain = utils.randomString(utils.promptStringLength())
 # inputPlain = utils.readInputsFromFile()
 # split the plain text in an array of 16Bytes each row
-inputPlainA = utils.splitString(inputPlain)
+inputPlainA = utils.split_blocks(inputPlain)
 
 
 # must get a key
