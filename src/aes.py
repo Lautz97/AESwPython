@@ -1,7 +1,6 @@
 # region -----------------------Global Import-----------------------
 
 
-
 # endregion
 
 
@@ -9,17 +8,17 @@
 
 
 # use S boxes to perform the byte sub layer in the encryption
-def sub_bytes(s):
+def substituteBytes(s):
     for i in range(4):
         for j in range(4):
-            s[i][j] = s_box[s[i][j]]
+            s[i][j] = sBox[s[i][j]]
 
 
 # use S boxes to perform the byte sub layer in the decryption
-def inv_sub_bytes(s):
+def inv_substituteBytes(s):
     for i in range(4):
         for j in range(4):
-            s[i][j] = inv_s_box[s[i][j]]
+            s[i][j] = inv_sBox[s[i][j]]
 
 
 # endregion
@@ -32,14 +31,14 @@ def inv_sub_bytes(s):
 
 
 # given the s state matrix shift rows for encryption in the shift rows layer
-def shift_rows(s):
+def shiftRows(s):
     s[0][1], s[1][1], s[2][1], s[3][1] = s[1][1], s[2][1], s[3][1], s[0][1]
     s[0][2], s[1][2], s[2][2], s[3][2] = s[2][2], s[3][2], s[0][2], s[1][2]
     s[0][3], s[1][3], s[2][3], s[3][3] = s[3][3], s[0][3], s[1][3], s[2][3]
 
 
 # given the s state matrix shift rows for decryption in the shift rows layer
-def inv_shift_rows(s):
+def inv_shiftRows(s):
     s[0][1], s[1][1], s[2][1], s[3][1] = s[3][1], s[0][1], s[1][1], s[2][1]
     s[0][2], s[1][2], s[2][2], s[3][2] = s[2][2], s[3][2], s[0][2], s[1][2]
     s[0][3], s[1][3], s[2][3], s[3][3] = s[1][3], s[2][3], s[3][3], s[0][3]
@@ -55,13 +54,13 @@ def inv_shift_rows(s):
 def xTime(a): return (((a << 1) ^ 0x1B) & 0xFF) if (a & 0x80) else (a << 1)
 
 
-def mix_columns(s):
+def mixColumns(s):
     for i in range(4):
-        mix_single_column(s[i])
+        mixSingleColumn(s[i])
 
 
 # as in section 4.1.2 in The Design of Rijndael resource pag 69 of 253
-def mix_single_column(a):
+def mixSingleColumn(a):
     t = a[0] ^ a[1] ^ a[2] ^ a[3]
     u = a[0]
     a[0] ^= t ^ xTime(a[0] ^ a[1])
@@ -71,7 +70,7 @@ def mix_single_column(a):
 
 
 # as in section 4.1.3 in The Design of Rijndael resource pag 70/71 of 253
-def inv_mix_columns(s):
+def inv_mixColumns(s):
     for i in range(4):
         u = xTime(xTime(s[i][0] ^ s[i][2]))
         v = xTime(xTime(s[i][1] ^ s[i][3]))
@@ -80,7 +79,7 @@ def inv_mix_columns(s):
         s[i][2] ^= u
         s[i][3] ^= v
 
-    mix_columns(s)
+    mixColumns(s)
 
 
 # endregion
@@ -92,12 +91,14 @@ def inv_mix_columns(s):
 # region ------------------------R CON--------------------------------
 # Rcon is what Rijndael documentation calls the power of 2
 # for a user specified value.
-r_con = (
+rCon = (
     0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40,
     0x80, 0x1B, 0x36, 0x6C, 0xD8, 0xAB, 0x4D, 0x9A,
     0x2F, 0x5E, 0xBC, 0x63, 0xC6, 0x97, 0x35, 0x6A,
     0xD4, 0xB3, 0x7D, 0xFA, 0xEF, 0xC5, 0x91, 0x39,
 )
+
+
 # endregion
 
 
@@ -105,121 +106,115 @@ r_con = (
 
 
 # Converts an array of byte words into a 4x4 matrix.
-def bytes2matrix(text):
-    """ Converts a 16-byte array into a 4x4 matrix.  """
-    return [list(text[i:i+4]) for i in range(0, len(text), 4)]
+def bytesToMatrix(text): return [list(text[i:i + 4]) for i in range(0, len(text), 4)]
 
 
 # Converts a matrix into an array of byte words.
-def matrix2bytes(matrix):
-    """   """
-    return bytes(sum(matrix, []))
+def matrixToBytes(matrix): return bytes(sum(matrix, []))
 
 
 # endregion
 
 
 # Returns a new byte array with the elements xor'ed.
-def xor_bytes(a, b): return bytes(i ^ j for i, j in zip(a, b))
+def xorBytes(a, b): return bytes(i ^ j for i, j in zip(a, b))
 
 
 # add key of this round ~can be better defined~
-def add_round_key(s, k):
+def roundKeyAddition(s, k):
     for i in range(4):
         for j in range(4):
             s[i][j] ^= k[i][j]
 
 
 class AES:
-
-    rounds_by_key_size = {16: 10}
+    # useful in case of implementation of aes for bigger keys
+    keySizeToRounds = {16: 10}
     keySize = 16
     rounds = 10
 
     # initialize key
-    def __init__(self, master_key):
-        assert len(master_key) is self.keySize
-        self._key_matrices = self._expand_key(master_key)
+    def __init__(self, originalKey):
+        assert len(originalKey) is self.keySize
+        self._keyMatrix = self._keySubdivisionByRounds(originalKey)
 
-    # Expands and returns a list of key matrices for the given master_key.
-    def _expand_key(self, master_key):
+    # Expands and returns a list of key matrices for the given original key.
+    def _keySubdivisionByRounds(self, originalKey):
 
         # Initialize round keys with raw key material.
-        key_columns = bytes2matrix(master_key)
-        iteration_size = len(master_key) // 4
+        keyColumns = bytesToMatrix(originalKey)
+        iterSize = len(originalKey) // 4
 
         i = 1
-        while len(key_columns) < (self.rounds + 1) * 4:
+        while len(keyColumns) < (self.rounds + 1) * 4:
             # Copy previous word.
-            word = list(key_columns[-1])
+            word = list(keyColumns[-1])
 
-            # Perform schedule_core once every "row".
-            if len(key_columns) % iteration_size == 0:
+            if len(keyColumns) % iterSize == 0:
                 # Circular shift.
                 word.append(word.pop(0))
                 # Map to S-BOX.
-                word = [s_box[b] for b in word]
+                word = [sBox[b] for b in word]
                 # XOR with first byte of R-CON, since the others bytes of R-CON are 0.
-                word[0] ^= r_con[i]
+                word[0] ^= rCon[i]
                 i += 1
-            elif len(master_key) == 32 and len(key_columns) % iteration_size == 4:
+            elif len(originalKey) == 32 and len(keyColumns) % iterSize == 4:
                 # Run word through S-box in the fourth iteration when using a
                 # 256-bit key.
-                word = [s_box[b] for b in word]
+                word = [sBox[b] for b in word]
 
             # XOR with equivalent word from previous iteration.
-            word: bytes = xor_bytes(word, key_columns[-iteration_size])
-            key_columns.append(word)
+            word: bytes = xorBytes(word, keyColumns[-iterSize])
+            keyColumns.append(word)
 
         # Group key words in 4x4 byte matrices.
-        return [key_columns[4*i: 4*(i+1)] for i in range(len(key_columns) // 4)]
+        return [keyColumns[4 * i: 4 * (i + 1)] for i in range(len(keyColumns) // 4)]
 
     # Encrypts a single block of 16 byte long plaintext.
-    def encrypt_block(self, plaintext):
+    def singleBlockEncrypt(self, plaintext):
         assert len(plaintext) == 16
 
-        plain_state = bytes2matrix(plaintext)
+        stateMatrix = bytesToMatrix(plaintext)
 
-        add_round_key(plain_state, self._key_matrices[0])
+        roundKeyAddition(stateMatrix, self._keyMatrix[0])
 
-        for i in range(1, self.n_rounds):
-            sub_bytes(plain_state)
-            shift_rows(plain_state)
-            mix_columns(plain_state)
-            add_round_key(plain_state, self._key_matrices[i])
+        for i in range(1, self.rounds):
+            substituteBytes(stateMatrix)
+            shiftRows(stateMatrix)
+            mixColumns(stateMatrix)
+            roundKeyAddition(stateMatrix, self._keyMatrix[i])
 
-        sub_bytes(plain_state)
-        shift_rows(plain_state)
-        add_round_key(plain_state, self._key_matrices[-1])
+        substituteBytes(stateMatrix)
+        shiftRows(stateMatrix)
+        roundKeyAddition(stateMatrix, self._keyMatrix[-1])
 
-        return matrix2bytes(plain_state)
+        return matrixToBytes(stateMatrix)
 
     # Decrypts a single block of 16 byte long ciphertext
-    def decrypt_block(self, ciphertext):
+    def singleBlockDecrypt(self, ciphertext):
         assert len(ciphertext) == 16
 
-        cipher_state = bytes2matrix(ciphertext)
+        stateMatrix = bytesToMatrix(ciphertext)
 
-        add_round_key(cipher_state, self._key_matrices[-1])
-        inv_shift_rows(cipher_state)
-        inv_sub_bytes(cipher_state)
+        roundKeyAddition(stateMatrix, self._keyMatrix[-1])
+        inv_shiftRows(stateMatrix)
+        inv_substituteBytes(stateMatrix)
 
-        for i in range(self.n_rounds - 1, 0, -1):
-            add_round_key(cipher_state, self._key_matrices[i])
-            inv_mix_columns(cipher_state)
-            inv_shift_rows(cipher_state)
-            inv_sub_bytes(cipher_state)
+        for i in range(self.rounds - 1, 0, -1):
+            roundKeyAddition(stateMatrix, self._keyMatrix[i])
+            inv_mixColumns(stateMatrix)
+            inv_shiftRows(stateMatrix)
+            inv_substituteBytes(stateMatrix)
 
-        add_round_key(cipher_state, self._key_matrices[0])
+        roundKeyAddition(stateMatrix, self._keyMatrix[0])
 
-        return matrix2bytes(cipher_state)
-
+        return matrixToBytes(stateMatrix)
 
 
 # region ----------------------------S Boxes-------------------------------------------------------
 
 
-s_box = (
+sBox = (
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
     0xB7, 0xFD, 0x93, 0x26, 0x36, 0x3F, 0xF7, 0xCC, 0x34, 0xA5, 0xE5, 0xF1, 0x71, 0xD8, 0x31, 0x15,
@@ -238,7 +233,7 @@ s_box = (
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16,
 )
 
-inv_s_box = (
+inv_sBox = (
     0x52, 0x09, 0x6A, 0xD5, 0x30, 0x36, 0xA5, 0x38, 0xBF, 0x40, 0xA3, 0x9E, 0x81, 0xF3, 0xD7, 0xFB,
     0x7C, 0xE3, 0x39, 0x82, 0x9B, 0x2F, 0xFF, 0x87, 0x34, 0x8E, 0x43, 0x44, 0xC4, 0xDE, 0xE9, 0xCB,
     0x54, 0x7B, 0x94, 0x32, 0xA6, 0xC2, 0x23, 0x3D, 0xEE, 0x4C, 0x95, 0x0B, 0x42, 0xFA, 0xC3, 0x4E,
@@ -256,6 +251,5 @@ inv_s_box = (
     0xA0, 0xE0, 0x3B, 0x4D, 0xAE, 0x2A, 0xF5, 0xB0, 0xC8, 0xEB, 0xBB, 0x3C, 0x83, 0x53, 0x99, 0x61,
     0x17, 0x2B, 0x04, 0x7E, 0xBA, 0x77, 0xD6, 0x26, 0xE1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0C, 0x7D,
 )
-
 
 # endregion
