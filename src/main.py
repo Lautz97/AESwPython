@@ -1,5 +1,5 @@
 from src import test, aes
-import string
+from time import perf_counter as pC
 
 
 # region TEST FUNCTIONS
@@ -37,7 +37,7 @@ def testRndBlocks():
     generatedKey = test.randomString(16)
     print("the key used is: " + generatedKey)
     # generate a random string prompting the length
-    inputPlain = test.randomString(test.promptStringLength("insert number of 16B block: ",16))
+    inputPlain = test.randomString(test.promptStringLength("insert number of 16B block: ", 16))
     # split the plain text in an array of 16Bytes each row
     inputPlainA = test.splitBlocks(inputPlain)
     # show some info
@@ -57,13 +57,54 @@ def testRndBlocks():
         print("something went wrong")
 
 
+def testTiming(showOutput=False):
+    dimensions = [1024, 102400, 10240000]
+    # dimensions = [102400, 102400, 102400]
+    for dim in dimensions:
+        generatedKey = test.randomString(16)
+        inputPlain = test.randomString(dim)
+        inputPlainA = test.splitBlocks(inputPlain)
+
+        t0 = pC()
+
+        te0 = pC()
+        encryptedArray = aes.AES(generatedKey).encrypt(inputPlainA)
+        if showOutput:
+            print("encryptedArray plain text = ", encryptedArray)
+        te1 = pC() - te0
+
+        td0 = pC()
+        decrypted = aes.AES(generatedKey).decrypt(encryptedArray)
+        if showOutput:
+            print("decrypted plain text = " + decrypted)
+        td1 = pC() - td0
+
+        t1 = pC() - t0
+        if inputPlain == decrypted:
+            print("input length: ", dim)
+            print("Total time elapsed: ", t1, " seconds")
+            print("Encryption time: ", te1, " seconds")
+            print("Decryption time: ", td1, " seconds")
+        else:
+            print("something went wrong")
+
+
 # endregion
 
 
 print("AES - 128 Python implementation by Lauterio Davide")
 
-testRndBlocks()
+testTiming()
 
-
-# inputPlain = utils.readInputsFromFile()
-
+# input length:  1024
+# Total time elapsed:  0.051485299999999956  seconds
+# Encryption time:  0.02237230000000001  seconds
+# Decryption time:  0.02910809999999997  seconds
+# input length:  102400
+# Total time elapsed:  4.7761286  seconds
+# Encryption time:  2.0138437  seconds
+# Decryption time:  2.7622816999999995  seconds
+# input length:  10240000
+# Total time elapsed:  467.3741961  seconds
+# Encryption time:  195.2238076  seconds
+# Decryption time:  272.1503844  seconds
