@@ -135,6 +135,7 @@ class AES:
 
     # initialize key
     def __init__(self, originalKey):
+        originalKey = bytes(originalKey, encoding='utf-8')
         assert len(originalKey) is self.keySize
         self._keyMatrix = self._keySubdivisionByRounds(originalKey)
 
@@ -170,11 +171,19 @@ class AES:
         # Group key words in 4x4 byte matrices.
         return [keyColumns[4 * i: 4 * (i + 1)] for i in range(len(keyColumns) // 4)]
 
-    # Encrypts a single block of 16 byte long plaintext.
-    def singleBlockEncrypt(self, plaintext):
-        assert len(plaintext) == 16
+    # Encrypt an array subdividing it in 16 bytes blocks
+    def encrypt(self, plainTextArray, cipherText=None):
+        if cipherText is None:
+            cipherText = []
+        for i in plainTextArray:
+            cipherText.append(self.singleBlockEncrypt(bytes(i, encoding='utf-8')))
+        return cipherText
 
-        stateMatrix = bytesToMatrix(plaintext)
+    # Encrypts a single block of 16 byte long plainText.
+    def singleBlockEncrypt(self, plainText):
+        assert len(plainText) == 16
+
+        stateMatrix = bytesToMatrix(plainText)
 
         roundKeyAddition(stateMatrix, self._keyMatrix[0])
 
@@ -190,11 +199,18 @@ class AES:
 
         return matrixToBytes(stateMatrix)
 
-    # Decrypts a single block of 16 byte long ciphertext
-    def singleBlockDecrypt(self, ciphertext):
-        assert len(ciphertext) == 16
+    # Encrypt an array subdividing it in 16 bytes blocks
+    def decrypt(self, cipherTextArray):
+        plainText = ""
+        for i in cipherTextArray:
+            plainText += self.singleBlockDecrypt(i).decode('utf-8')
+        return plainText
 
-        stateMatrix = bytesToMatrix(ciphertext)
+    # Decrypts a single block of 16 byte long cipherText
+    def singleBlockDecrypt(self, cipherText):
+        assert len(cipherText) == 16
+
+        stateMatrix = bytesToMatrix(cipherText)
 
         roundKeyAddition(stateMatrix, self._keyMatrix[-1])
         inv_shiftRows(stateMatrix)

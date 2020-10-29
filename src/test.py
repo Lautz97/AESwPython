@@ -8,10 +8,10 @@ def randomString(n=16):
 
 
 # ask to user how many characters the random string must be, just for debug
-def promptStringLength():
-    r = input("length of the string?")
+def promptStringLength(text="length of the string?", blockMultiplier=1):
+    r = input(text)
     # todo validate input r
-    return int(r)
+    return int(r)*blockMultiplier
 
 
 # todo
