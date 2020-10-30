@@ -2,6 +2,8 @@
 ## Implementing AES-128 in Python
 
 Implemented vanilla AES-128 in Python3
+
+install pycryptodome via "pip install pycryptodome"
 ***
 This is the output of a test made on random picked plain strings
 
