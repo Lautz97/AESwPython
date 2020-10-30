@@ -4,14 +4,14 @@ import string
 
 # return a random string of n characters, just for debug
 def randomString(n=16):
-    return ''.join(random.choice(string.ascii_letters+string.whitespace+string.digits) for i in range(n))
+    return ''.join(random.choice(string.ascii_letters + string.whitespace + string.digits) for i in range(n))
 
 
 # ask to user how many characters the random string must be, just for debug
 def promptStringLength(text="length of the string?", blockMultiplier=1):
     r = input(text)
     # todo validate input r
-    return int(r)*blockMultiplier
+    return int(r) * blockMultiplier
 
 
 # todo
@@ -29,36 +29,4 @@ def utf8len(s): return len(s.encode('utf-8'))
 def splitBlocks(message, blockSize=16):
     assert len(message) % blockSize == 0
     return [message[i:i + 16] for i in range(0, len(message), blockSize)]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

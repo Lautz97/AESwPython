@@ -3,6 +3,10 @@
 
 Implemented vanilla AES-128 in Python3
 ***
+
+to run this ./src/main.py
+
+***
 This is the output of a test made on random picked plain strings
 
 - input length:  1024
